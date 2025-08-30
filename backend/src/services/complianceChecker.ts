@@ -57,7 +57,6 @@ export class ComplianceChecker {
       let compliantCount = 0;
       let nonCompliantCount = 0;
       let reviewRequiredCount = 0;
-      let totalRiskScore = 0;
 
       // Filter features and laws based on request
       const targetFeatures = request.features 
@@ -86,12 +85,8 @@ export class ComplianceChecker {
               reviewRequiredCount++;
               break;
           }
-
-          totalRiskScore += this.calculateRiskScore(result);
         }
       }
-
-      const overallRiskScore = results.length > 0 ? totalRiskScore / results.length : 0;
 
       return {
         results,
@@ -100,8 +95,7 @@ export class ComplianceChecker {
           total_laws: targetLaws.length,
           compliant_count: compliantCount,
           non_compliant_count: nonCompliantCount,
-          review_required_count: reviewRequiredCount,
-          overall_risk_score: Math.round(overallRiskScore * 100) / 100
+          review_required_count: reviewRequiredCount
         },
         timestamp: new Date().toISOString()
       };
@@ -156,11 +150,10 @@ export class ComplianceChecker {
       return {
         feature_name: feature.feature_name,
         law_title: law.law_title,
+        law_description: law.law_description,
         compliance_status: 'requires_review',
-        confidence_score: 0,
         reasoning: 'Error occurred during compliance check. Manual review required.',
-        recommendations: ['Review the feature implementation manually', 'Check system logs for errors'],
-        risk_level: 'medium'
+        recommendations: ['Review the feature implementation manually', 'Check system logs for errors']
       };
     }
   }
@@ -179,10 +172,8 @@ ${correctionsContext}
 You must respond with ONLY valid JSON in this exact format:
 {
   "compliance_status": "compliant|non-compliant|requires_review",
-  "confidence_score": 0.0-1.0,
   "reasoning": "Detailed explanation of your assessment",
-  "recommendations": ["Array of specific recommendations"],
-  "risk_level": "low|medium|high"
+  "recommendations": ["Array of specific recommendations"]
 }
 
 Do not include any text before or after the JSON. Only return the JSON object.`;
@@ -198,16 +189,15 @@ Do not include any text before or after the JSON. Only return the JSON object.`;
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         
-        // Validate required fields
-        if (parsed.compliance_status && parsed.confidence_score !== undefined && parsed.reasoning && parsed.recommendations && parsed.risk_level) {
+                // Validate required fields
+        if (parsed.compliance_status && parsed.reasoning && parsed.recommendations) {
           return {
             feature_name: feature.feature_name,
             law_title: law.law_title,
+            law_description: law.law_description,
             compliance_status: parsed.compliance_status,
-            confidence_score: parsed.confidence_score,
             reasoning: parsed.reasoning,
-            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually'],
-            risk_level: parsed.risk_level
+            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually']
           };
         } else {
           console.warn('JSON response missing required fields:', parsed);
@@ -223,29 +213,14 @@ Do not include any text before or after the JSON. Only return the JSON object.`;
     return {
       feature_name: feature.feature_name,
       law_title: law.law_title,
+      law_description: law.law_description,
       compliance_status: 'requires_review',
-      confidence_score: 0.3,
       reasoning: 'Response parsing failed. Manual review required.',
-      recommendations: ['Review the feature implementation manually', 'Check compliance requirements'],
-      risk_level: 'medium'
+      recommendations: ['Review the feature implementation manually', 'Check compliance requirements']
     };
   }
 
-  private calculateRiskScore(result: ComplianceResult): number {
-    const baseRisk = {
-      'low': 0.2,
-      'medium': 0.5,
-      'high': 0.8
-    }[result.risk_level] || 0.5;
 
-    const complianceMultiplier = {
-      'compliant': 0.3,
-      'requires_review': 0.7,
-      'non-compliant': 1.0
-    }[result.compliance_status] || 0.7;
-
-    return baseRisk * complianceMultiplier * (1 - result.confidence_score);
-  }
 
   public async refreshData(): Promise<void> {
     await this.dataHandler.refreshData();

@@ -13,11 +13,10 @@ export interface Feature {
 export interface ComplianceResult {
   feature_name: string;
   law_title: string;
+  law_description: string;
   compliance_status: 'compliant' | 'non-compliant' | 'requires_review';
-  confidence_score: number;
   reasoning: string;
   recommendations: string[];
-  risk_level: string;
 }
 
 export interface ComplianceCheckRequest {
@@ -67,5 +66,4 @@ export interface ComplianceSummary {
   compliant_count: number;
   non_compliant_count: number;
   review_required_count: number;
-  overall_risk_score: number;
 }

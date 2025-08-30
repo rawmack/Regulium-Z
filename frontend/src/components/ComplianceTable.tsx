@@ -47,24 +47,7 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
     }
   };
 
-  const getRiskBadge = (risk: string) => {
-    switch (risk.toLowerCase()) {
-      case 'high':
-        return <span className="badge-danger">High Risk</span>;
-      case 'medium':
-        return <span className="badge-warning">Medium Risk</span>;
-      case 'low':
-        return <span className="badge-success">Low Risk</span>;
-      default:
-        return <span className="badge-info">{risk} Risk</span>;
-    }
-  };
 
-  const getConfidenceColor = (score: number) => {
-    if (score >= 0.8) return 'text-success-600';
-    if (score >= 0.6) return 'text-warning-600';
-    return 'text-danger-600';
-  };
 
   return (
     <div className="space-y-6">
@@ -106,17 +89,7 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
           </div>
         </div>
 
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Risk Score</p>
-              <p className="text-2xl font-bold text-warning-600">{summary.overall_risk_score}</p>
-            </div>
-            <div className="p-2 bg-warning-100 rounded-lg">
-              <AlertCircle className="w-6 h-6 text-warning-600" />
-            </div>
-          </div>
-        </div>
+
       </div>
 
       {/* Results Table */}
@@ -135,14 +108,12 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Status</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Feature</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Law</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Risk Level</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-700">Confidence</th>
                 <th className="text-left py-3 px-4 font-medium text-gray-700">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {results.map((result) => {
-                const resultId = `${result.feature_name}-${result.law_title}`;
+              {results.map((result, index) => {
+                const resultId = `${result.feature_name}-${result.law_title}-${index}`;
                 const isExpanded = expandedRows.has(resultId);
                 
                 return (
@@ -159,22 +130,13 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
                       <td className="py-4 px-4">
                         <div>
                           <p className="font-medium text-gray-900">{result.feature_name}</p>
-                          <p className="text-sm text-gray-500">{result.feature_name}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div>
                           <p className="font-medium text-gray-900">{result.law_title}</p>
-                          <p className="text-sm text-gray-500">{result.law_title}</p>
+                          <p className="text-sm text-gray-500">{result.law_description}</p>
                         </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        {getRiskBadge(result.risk_level)}
-                      </td>
-                      <td className="py-4 px-4">
-                        <span className={`font-medium ${getConfidenceColor(result.confidence_score)}`}>
-                          {Math.round(result.confidence_score * 100)}%
-                        </span>
                       </td>
                       <td className="py-4 px-4">
                         <div className="flex items-center space-x-2">
@@ -199,10 +161,10 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
                       </td>
                     </tr>
                     
-                    {/* Expanded Details Row */}
-                    {isExpanded && (
-                      <tr className="bg-blue-50 border-b border-gray-100">
-                        <td colSpan={6} className="py-4 px-4">
+                                         {/* Expanded Details Row */}
+                     {isExpanded && (
+                       <tr className="bg-blue-50 border-b border-gray-100">
+                         <td colSpan={4} className="py-4 px-4">
                           <div className="space-y-4">
                             <div>
                               <h4 className="font-medium text-gray-900 mb-2">Reasoning</h4>
