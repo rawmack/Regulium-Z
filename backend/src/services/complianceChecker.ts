@@ -40,6 +40,11 @@ export class ComplianceChecker {
 
   public async checkCompliance(request: ComplianceCheckRequest): Promise<ComplianceCheckResponse> {
     try {
+      // Ensure data is ready before proceeding
+      if (!this.dataHandler.isReady()) {
+        await this.dataHandler.waitForReady();
+      }
+      
       const laws = this.dataHandler.getLaws();
       const features = this.dataHandler.getFeatures();
 

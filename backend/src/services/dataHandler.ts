@@ -1,19 +1,29 @@
 import fs from 'fs';
 import path from 'path';
 import { Law, Feature } from '../types';
+import { getCSVPath } from '../utils/pathUtils';
 
 export class DataHandler {
   private laws: Law[] = [];
   private features: Feature[] = [];
   private isInitialized = false;
+  private initializationPromise: Promise<void>;
 
   constructor() {
-    // Initialize immediately and wait for completion
-    this.initialize().then(() => {
+    // Start initialization and store the promise
+    this.initializationPromise = this.initialize();
+    
+    // Wait for initialization to complete
+    this.initializationPromise.then(() => {
       console.log('DataHandler initialization completed successfully');
     }).catch(error => {
       console.error('DataHandler initialization failed:', error);
     });
+  }
+
+  // Method to wait for initialization to complete
+  public async waitForReady(): Promise<void> {
+    await this.initializationPromise;
   }
 
   private async initialize(): Promise<void> {
@@ -30,17 +40,21 @@ export class DataHandler {
     } catch (error) {
       console.error('Error initializing DataHandler:', error);
       this.isInitialized = false;
+      throw error; // Re-throw to make the promise reject
     }
   }
 
   private async loadLaws(): Promise<void> {
     try {
-      const lawsPath = path.resolve(process.env.LAWS_CSV_PATH || '../laws.csv');
+      // Use shared path utility function
+      const lawsPath = getCSVPath('laws.csv');
+      
       console.log('Loading laws from:', lawsPath);
+      console.log('Current working directory:', process.cwd());
+      console.log('__dirname:', __dirname);
       
       if (!fs.existsSync(lawsPath)) {
-        console.warn(`Laws CSV file not found at: ${lawsPath}`);
-        return;
+        throw new Error(`Laws CSV file not found at: ${lawsPath}`);
       }
 
       const fileContent = fs.readFileSync(lawsPath, 'utf8');
@@ -50,8 +64,7 @@ export class DataHandler {
       console.log('Total lines in laws CSV:', lines.length);
       
       if (lines.length < 2) {
-        console.warn('Laws CSV has insufficient data');
-        return;
+        throw new Error('Laws CSV has insufficient data');
       }
 
       const headers = lines[0].split(',').map(h => h.trim());
@@ -83,6 +96,10 @@ export class DataHandler {
       this.laws = results;
       console.log(`Loaded ${results.length} laws successfully`);
       
+      if (results.length === 0) {
+        throw new Error('No laws were loaded from the CSV file');
+      }
+      
     } catch (error) {
       console.error('Error loading laws:', error);
       throw error; // Re-throw to see the error in the main initialization
@@ -91,12 +108,13 @@ export class DataHandler {
 
   private async loadFeatures(): Promise<void> {
     try {
-      const featuresPath = path.resolve(process.env.FEATURES_CSV_PATH || '../features.csv');
+      // Use shared path utility function
+      const featuresPath = getCSVPath('features.csv');
+      
       console.log('Loading features from:', featuresPath);
       
       if (!fs.existsSync(featuresPath)) {
-        console.warn(`Features CSV file not found at: ${featuresPath}`);
-        return;
+        throw new Error(`Features CSV file not found at: ${featuresPath}`);
       }
 
       const fileContent = fs.readFileSync(featuresPath, 'utf8');
@@ -106,8 +124,7 @@ export class DataHandler {
       console.log('Total lines in features CSV:', lines.length);
       
       if (lines.length < 2) {
-        console.warn('Features CSV has insufficient data');
-        return;
+        throw new Error('Features CSV has insufficient data');
       }
 
       const headers = lines[0].split(',').map(h => h.trim());
@@ -133,6 +150,10 @@ export class DataHandler {
       
       this.features = results;
       console.log(`Loaded ${results.length} features successfully`);
+      
+      if (results.length === 0) {
+        throw new Error('No features were loaded from the CSV file');
+      }
       
     } catch (error) {
       console.error('Error loading features:', error);

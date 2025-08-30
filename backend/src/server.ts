@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import path from 'path';
 import apiRoutes from './routes/api';
+import { getCSVPath } from './utils/pathUtils';
 
 // Load environment variables from the backend directory
 dotenv.config({ path: path.resolve(__dirname, '../.env') });
@@ -111,8 +112,10 @@ app.listen(PORT, () => {
   console.log(`🔗 API Base URL: http://localhost:${PORT}/api`);
   console.log(`🌐 CORS Origin: ${process.env.CORS_ORIGIN || 'http://localhost:3000'}`);
   console.log(`🤖 OpenAI Model: ${process.env.OPENAI_MODEL || 'gpt-4'}`);
-  console.log(`📁 Laws CSV: ${process.env.LAWS_CSV_PATH || '../laws.csv'}`);
-  console.log(`📁 Features CSV: ${process.env.FEATURES_CSV_PATH || '../features.csv'}`);
+  
+  // Use shared path utility function
+  console.log(`📁 Laws CSV: ${getCSVPath('laws.csv')}`);
+  console.log(`📁 Features CSV: ${getCSVPath('features.csv')}`);
 });
 
 export default app;

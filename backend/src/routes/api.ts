@@ -2,6 +2,7 @@ import { Router, Request, Response } from 'express';
 import { ComplianceChecker } from '../services/complianceChecker';
 import { FeedbackHandler } from '../services/feedbackHandler';
 import { DataHandler } from '../services/dataHandler';
+import { getCSVPath } from '../utils/pathUtils';
 import { 
   ComplianceCheckRequest, 
   ComplianceCheckResponse,
@@ -37,45 +38,56 @@ const getDataHandler = () => {
   return dataHandler;
 };
 
-// Health check endpoint
-router.get('/health', (req: Request, res: Response) => {
+// Helper function to ensure data is ready
+const ensureDataReady = async () => {
   const handler = getDataHandler();
-  const fs = require('fs');
-  const path = require('path');
-  
-  const lawsPath = path.resolve('../laws.csv');
-  const featuresPath = path.resolve('../features.csv');
-  
-  return res.json({
-    status: 'healthy',
-    timestamp: new Date().toISOString(),
-    service: 'Regulium-Z Backend',
-    dataReady: handler.isReady(),
-    lawsCount: handler.getLaws().length,
-    featuresCount: handler.getFeatures().length,
-    handlerCreated: !!handler,
-    handlerType: handler.constructor.name,
-    lawsPath: lawsPath,
-    featuresPath: featuresPath,
-    lawsExists: fs.existsSync(lawsPath),
-    featuresExists: fs.existsSync(featuresPath),
-    lawsSize: fs.existsSync(lawsPath) ? fs.statSync(lawsPath).size : 0,
-    featuresSize: fs.existsSync(featuresPath) ? fs.statSync(featuresPath).size : 0
-  });
+  if (!handler.isReady()) {
+    await handler.waitForReady();
+  }
+  return handler;
+};
+
+// Health check endpoint
+router.get('/health', async (req: Request, res: Response) => {
+  try {
+    const handler = await ensureDataReady();
+    const fs = require('fs');
+    
+    // Use shared path utility function
+    const lawsPath = getCSVPath('laws.csv');
+    const featuresPath = getCSVPath('features.csv');
+    
+    return res.json({
+      status: 'healthy',
+      timestamp: new Date().toISOString(),
+      service: 'Regulium-Z Backend',
+      dataReady: handler.isReady(),
+      lawsCount: handler.getLaws().length,
+      featuresCount: handler.getFeatures().length,
+      handlerCreated: !!handler,
+      handlerType: handler.constructor.name,
+      lawsPath: lawsPath,
+      featuresPath: featuresPath,
+      lawsExists: fs.existsSync(lawsPath),
+      featuresExists: fs.existsSync(featuresPath),
+      lawsSize: fs.existsSync(lawsPath) ? fs.statSync(lawsPath).size : 0,
+      featuresSize: fs.existsSync(featuresPath) ? fs.statSync(featuresPath).size : 0
+    });
+  } catch (error) {
+    console.error('Health check error:', error);
+    return res.status(500).json({
+      status: 'error',
+      error: error instanceof Error ? error.message : 'Unknown error',
+      timestamp: new Date().toISOString()
+    });
+  }
 });
 
 // Get all laws
-router.get('/laws', (req: Request, res: Response) => {
-  if (!getDataHandler().isReady()) {
-    return res.status(503).json({
-      success: false,
-      error: 'Data not yet loaded. Please try again in a moment.',
-      dataReady: false
-    });
-  }
-  
+router.get('/laws', async (req: Request, res: Response) => {
   try {
-    const laws = getDataHandler().getLaws();
+    const handler = await ensureDataReady();
+    const laws = handler.getLaws();
     return res.json({
       success: true,
       data: laws,
@@ -91,17 +103,10 @@ router.get('/laws', (req: Request, res: Response) => {
 });
 
 // Get all features
-router.get('/features', (req: Request, res: Response) => {
-  if (!getDataHandler().isReady()) {
-    return res.status(503).json({
-      success: false,
-      error: 'Data not yet loaded. Please try again in a moment.',
-      dataReady: false
-    });
-  }
-  
+router.get('/features', async (req: Request, res: Response) => {
   try {
-    const features = getDataHandler().getFeatures();
+    const handler = await ensureDataReady();
+    const features = handler.getFeatures();
     return res.json({
       success: true,
       data: features,
@@ -117,9 +122,10 @@ router.get('/features', (req: Request, res: Response) => {
 });
 
 // Get law by title
-router.get('/laws/:title', (req: Request, res: Response) => {
+router.get('/laws/:title', async (req: Request, res: Response) => {
   try {
-    const law = getDataHandler().getLawByTitle(req.params.title);
+    const handler = await ensureDataReady();
+    const law = handler.getLawByTitle(req.params.title);
     if (!law) {
       return res.status(404).json({
         success: false,
@@ -140,9 +146,10 @@ router.get('/laws/:title', (req: Request, res: Response) => {
 });
 
 // Get feature by name
-router.get('/features/:name', (req: Request, res: Response) => {
+router.get('/features/:name', async (req: Request, res: Response) => {
   try {
-    const feature = getDataHandler().getFeatureByName(req.params.name);
+    const handler = await ensureDataReady();
+    const feature = handler.getFeatureByName(req.params.name);
     if (!feature) {
       return res.status(404).json({
         success: false,
