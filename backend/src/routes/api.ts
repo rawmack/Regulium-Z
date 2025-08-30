@@ -121,6 +121,47 @@ router.get('/features', async (req: Request, res: Response) => {
   }
 });
 
+// Add new feature endpoint
+router.post('/features', async (req: Request, res: Response) => {
+  try {
+    const { feature_name, feature_description } = req.body;
+    
+    // Validate request
+    if (!feature_name || !feature_description) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: feature_name and feature_description are required'
+      });
+    }
+
+    console.log('Adding new feature:', { feature_name, feature_description });
+    
+    // Add feature to CSV
+    const success = await getDataHandler().addFeature(feature_name, feature_description);
+    
+    if (success) {
+      console.log('Feature added successfully to CSV');
+      return res.status(201).json({
+        success: true,
+        message: 'Feature added successfully',
+        data: { feature_name, feature_description }
+      });
+    } else {
+      console.error('Failed to add feature to CSV');
+      return res.status(500).json({
+        success: false,
+        error: 'Failed to add feature to CSV'
+      });
+    }
+  } catch (error) {
+    console.error('Error adding feature:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to add feature'
+    });
+  }
+});
+
 // Get law by title
 router.get('/laws/:title', async (req: Request, res: Response) => {
   try {
@@ -192,6 +233,108 @@ router.post('/compliance/check', async (req: Request, res: Response) => {
     });
   } catch (error) {
     console.error('Error in compliance check:', error);
+    return res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to perform compliance check'
+    });
+  }
+});
+
+// Check compliance of single feature against all laws
+router.post('/compliance/check-feature', async (req: Request, res: Response) => {
+  try {
+    const { feature_name, feature_description, include_abbreviations, include_corrections } = req.body;
+    
+    // Validate request
+    if (!feature_name || !feature_description) {
+      return res.status(400).json({
+        success: false,
+        error: 'Missing required fields: feature_name and feature_description are required'
+      });
+    }
+
+    console.log('Checking compliance for new feature:', { feature_name, feature_description });
+    
+    // Create a compliance check request for this single feature against all laws
+    // Note: Don't pass features array to check against ALL laws
+    const complianceRequest = {
+      include_abbreviations: include_abbreviations ?? true,
+      include_corrections: include_corrections ?? true
+    };
+
+    console.log('Compliance check request:', complianceRequest);
+    
+    // Get the compliance checker and create a temporary feature for checking
+    const complianceChecker = getComplianceChecker();
+    const tempFeature = { feature_name, feature_description };
+    
+    // Get all laws
+    const dataHandler = getDataHandler();
+    if (!dataHandler.isReady()) {
+      await dataHandler.waitForReady();
+    }
+    const allLaws = dataHandler.getLaws();
+    
+    console.log(`Checking compliance for feature "${feature_name}" against ${allLaws.length} laws`);
+    
+    // Check compliance against all laws
+    const results = [];
+    let compliantCount = 0;
+    let nonCompliantCount = 0;
+    let reviewRequiredCount = 0;
+    
+    for (const law of allLaws) {
+      try {
+        const result = await complianceChecker.checkFeatureCompliance(tempFeature, law, complianceRequest);
+        results.push(result);
+        
+        switch (result.compliance_status) {
+          case 'compliant':
+            compliantCount++;
+            break;
+          case 'non-compliant':
+            nonCompliantCount++;
+            break;
+          case 'requires_review':
+            reviewRequiredCount++;
+            break;
+        }
+      } catch (error) {
+        console.error(`Error checking compliance for feature ${feature_name} against law ${law.law_title}:`, error);
+        // Add fallback result
+        results.push({
+          feature_name,
+          law_title: law.law_title,
+          law_description: law.law_description,
+          compliance_status: 'requires_review' as const,
+          reasoning: 'Error occurred during compliance check. Manual review required.',
+          recommendations: ['Review the feature implementation manually', 'Check system logs for errors']
+        });
+        reviewRequiredCount++;
+      }
+    }
+    
+    const complianceResponse = {
+      results,
+      summary: {
+        total_features: 1,
+        total_laws: allLaws.length,
+        compliant_count: compliantCount,
+        non_compliant_count: nonCompliantCount,
+        review_required_count: reviewRequiredCount,
+        overall_risk_score: Math.round(((nonCompliantCount + reviewRequiredCount) / allLaws.length) * 100)
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    console.log('Compliance check completed successfully');
+    
+    return res.json({
+      success: true,
+      data: complianceResponse
+    });
+  } catch (error) {
+    console.error('Error in single feature compliance check:', error);
     return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to perform compliance check'

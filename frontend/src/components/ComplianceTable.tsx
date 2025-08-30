@@ -89,6 +89,18 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
           </div>
         </div>
 
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Non-Compliant</p>
+              <p className="text-2xl font-bold text-danger-600">{summary.non_compliant_count}</p>
+            </div>
+            <div className="p-2 bg-danger-100 rounded-lg">
+              <XCircle className="w-6 h-6 text-danger-600" />
+            </div>
+          </div>
+        </div>
+
 
       </div>
 

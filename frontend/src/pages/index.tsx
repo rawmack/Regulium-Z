@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Shield, Zap, BarChart3, MessageSquare, Loader2, AlertCircle } from 'lucide-react';
+import { Shield, Zap, BarChart3, MessageSquare, Loader2, AlertCircle, RefreshCw, History } from 'lucide-react';
 import ComplianceTable from '../components/ComplianceTable';
 import FeedbackChatbox from '../components/FeedbackChatbox';
 import { 
   ComplianceResult, 
-  ComplianceCheckRequest, 
+  SingleFeatureComplianceRequest,
   FeedbackRequest,
   Feature,
   Law 
@@ -16,8 +16,8 @@ const MainPage: React.FC = () => {
   const [complianceSummary, setComplianceSummary] = useState<any>(null);
   const [features, setFeatures] = useState<Feature[]>([]);
   const [laws, setLaws] = useState<Law[]>([]);
-  const [selectedFeatures, setSelectedFeatures] = useState<string[]>([]);
-  const [selectedLaws, setSelectedLaws] = useState<string[]>([]);
+  const [featureTitle, setFeatureTitle] = useState('');
+  const [featureDescription, setFeatureDescription] = useState('');
   const [includeAbbreviations, setIncludeAbbreviations] = useState(true);
   const [includeCorrections, setIncludeCorrections] = useState(true);
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(false);
@@ -39,8 +39,6 @@ const MainPage: React.FC = () => {
       console.log('Features data:', data);
       if (data.success) {
         setFeatures(data.data);
-        // Select all features by default
-        setSelectedFeatures(data.data.map((f: Feature) => f.feature_name));
         console.log('Features loaded successfully:', data.data.length);
       }
     } catch (error) {
@@ -58,8 +56,6 @@ const MainPage: React.FC = () => {
       console.log('Laws data:', data);
       if (data.success) {
         setLaws(data.data);
-        // Select all laws by default
-        setSelectedLaws(data.data.map((l: Law) => l.law_title));
         console.log('Laws loaded successfully:', data.data.length);
       }
     } catch (error) {
@@ -69,8 +65,8 @@ const MainPage: React.FC = () => {
   };
 
   const handleComplianceCheck = async () => {
-    if (selectedFeatures.length === 0 || selectedLaws.length === 0) {
-      setError('Please select at least one feature and one law');
+    if (!featureTitle.trim() || !featureDescription.trim()) {
+      setError('Please fill in both Feature Title and Feature Description');
       return;
     }
 
@@ -78,32 +74,60 @@ const MainPage: React.FC = () => {
     setError(null);
 
     try {
-      const request: ComplianceCheckRequest = {
-        features: selectedFeatures,
-        laws: selectedLaws,
-        include_abbreviations: includeAbbreviations,
-        include_corrections: includeCorrections
-      };
+      console.log('Starting compliance check for new feature:', { featureTitle, featureDescription });
 
-      const response = await fetch('/api/compliance/check', {
+      // First, add the feature to CSV
+      console.log('Adding feature to CSV...');
+      const addFeatureResponse = await fetch('/api/features', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(request),
+        body: JSON.stringify({
+          feature_name: featureTitle.trim(),
+          feature_description: featureDescription.trim()
+        }),
       });
 
-      const data = await response.json();
+      const addFeatureData = await addFeatureResponse.json();
+      if (!addFeatureData.success) {
+        throw new Error(addFeatureData.error || 'Failed to add feature to CSV');
+      }
+      console.log('Feature added to CSV successfully');
 
-      if (data.success) {
-        setComplianceResults(data.data.results);
-        setComplianceSummary(data.data.summary);
+      // Then, check compliance against all laws
+      console.log('Checking compliance against all laws...');
+      const complianceRequest: SingleFeatureComplianceRequest = {
+        feature_name: featureTitle.trim(),
+        feature_description: featureDescription.trim(),
+        include_abbreviations: includeAbbreviations,
+        include_corrections: includeCorrections
+      };
+
+      const complianceResponse = await fetch('/api/compliance/check-feature', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(complianceRequest),
+      });
+
+      const complianceData = await complianceResponse.json();
+
+      if (complianceData.success) {
+        console.log('Compliance check completed successfully');
+        setComplianceResults(complianceData.data.results);
+        setComplianceSummary(complianceData.data.summary);
+        
+        // Clear the input fields after successful submission
+        setFeatureTitle('');
+        setFeatureDescription('');
       } else {
-        setError(data.error || 'Compliance check failed');
+        throw new Error(complianceData.error || 'Compliance check failed');
       }
     } catch (error) {
       console.error('Error during compliance check:', error);
-      setError('Failed to perform compliance check. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to perform compliance check. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -135,20 +159,14 @@ const MainPage: React.FC = () => {
     }
   };
 
-  const handleSelectAllFeatures = () => {
-    setSelectedFeatures(features.map(f => f.feature_name));
+  const handleSyncLaws = () => {
+    console.log('Sync Laws button clicked - placeholder functionality');
+    // TODO: Implement sync laws functionality
   };
 
-  const handleSelectAllLaws = () => {
-    setSelectedLaws(laws.map(l => l.law_title));
-  };
-
-  const handleClearAllFeatures = () => {
-    setSelectedFeatures([]);
-  };
-
-  const handleClearAllLaws = () => {
-    setSelectedLaws([]);
+  const handleCheckHistory = () => {
+    console.log('Check History button clicked - placeholder functionality');
+    // TODO: Implement check history functionality
   };
 
   return (
@@ -201,92 +219,59 @@ const MainPage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Features Selection */}
+            {/* Feature Input Fields */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Features to Check</h3>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleSelectAllFeatures}
-                    className="text-sm text-primary-600 hover:text-primary-800 underline"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={handleClearAllFeatures}
-                    className="text-sm text-gray-600 hover:text-gray-800 underline"
-                  >
-                    Clear All
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {features.map((feature) => (
-                  <label key={feature.feature_name} className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedFeatures.includes(feature.feature_name)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedFeatures([...selectedFeatures, feature.feature_name]);
-                        } else {
-                          setSelectedFeatures(selectedFeatures.filter(id => id !== feature.feature_name));
-                        }
-                      }}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{feature.feature_name}</p>
-                      <p className="text-xs text-gray-500 truncate">{feature.feature_name}</p>
-                    </div>
-                    <span className="badge badge-info">
-                      Feature
-                    </span>
+              <h3 className="text-lg font-medium text-gray-900 mb-4">New Feature Details</h3>
+              <div className="space-y-4">
+                <div>
+                  <label htmlFor="featureTitle" className="block text-sm font-medium text-gray-700 mb-2">
+                    Feature Title *
                   </label>
-                ))}
+                  <input
+                    id="featureTitle"
+                    type="text"
+                    value={featureTitle}
+                    onChange={(e) => setFeatureTitle(e.target.value)}
+                    placeholder="Enter feature title"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    disabled={isLoading}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="featureDescription" className="block text-sm font-medium text-gray-700 mb-2">
+                    Feature Description *
+                  </label>
+                  <textarea
+                    id="featureDescription"
+                    value={featureDescription}
+                    onChange={(e) => setFeatureDescription(e.target.value)}
+                    placeholder="Enter feature description"
+                    rows={4}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary-500 focus:border-primary-500"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             </div>
 
-            {/* Laws Selection */}
+            {/* Placeholder Buttons */}
             <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-medium text-gray-900">Laws to Check Against</h3>
-                <div className="flex space-x-2">
-                  <button
-                    onClick={handleSelectAllLaws}
-                    className="text-sm text-primary-600 hover:text-primary-800 underline"
-                  >
-                    Select All
-                  </button>
-                  <button
-                    onClick={handleClearAllLaws}
-                    className="text-sm text-gray-600 hover:text-gray-800 underline"
-                  >
-                    Clear All
-                  </button>
-                </div>
-              </div>
-              <div className="space-y-2 max-h-48 overflow-y-auto">
-                {laws.map((law) => (
-                  <label key={law.law_title} className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={selectedLaws.includes(law.law_title)}
-                      onChange={(e) => {
-                        if (e.target.checked) {
-                          setSelectedLaws([...selectedLaws, law.law_title]);
-                        } else {
-                          setSelectedLaws(selectedLaws.filter(id => id !== law.law_title));
-                        }
-                      }}
-                      className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{law.law_title}</p>
-                      <p className="text-xs text-gray-500 truncate">{law['country-region']}</p>
-                    </div>
-                  </label>
-                ))}
+              <h3 className="text-lg font-medium text-gray-900 mb-4">System Actions</h3>
+              <div className="space-y-4">
+                <button
+                  onClick={handleSyncLaws}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                  <span>Sync Laws</span>
+                </button>
+                <button
+                  onClick={handleCheckHistory}
+                  className="w-full flex items-center justify-center space-x-2 px-4 py-3 border border-gray-300 rounded-md shadow-sm bg-white text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                >
+                  <History className="w-5 h-5" />
+                  <span>Check History</span>
+                </button>
               </div>
             </div>
           </div>
@@ -315,22 +300,22 @@ const MainPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Run Check Button */}
+          {/* Check Compliance Button */}
           <div className="mt-6 flex items-center justify-center">
             <button
               onClick={handleComplianceCheck}
-              disabled={isLoading || selectedFeatures.length === 0 || selectedLaws.length === 0}
+              disabled={isLoading || !featureTitle.trim() || !featureDescription.trim()}
               className="btn btn-primary px-8 py-3 text-lg disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? (
                 <>
                   <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                  Running Compliance Check...
+                  Checking Compliance...
                 </>
               ) : (
                 <>
                   <BarChart3 className="w-5 h-5 mr-2" />
-                  Run Compliance Check
+                  Check Compliance
                 </>
               )}
             </button>
@@ -359,7 +344,7 @@ const MainPage: React.FC = () => {
             <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">No Compliance Results Yet</h3>
             <p className="text-gray-500">
-              Configure your compliance check above and click "Run Compliance Check" to get started.
+              Enter a new feature above and click "Check Compliance" to get started.
             </p>
           </div>
         )}

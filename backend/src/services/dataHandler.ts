@@ -218,4 +218,63 @@ export class DataHandler {
   public isReady(): boolean {
     return this.isInitialized;
   }
+
+  public async addFeature(featureName: string, featureDescription: string): Promise<boolean> {
+    try {
+      console.log(`Adding new feature: ${featureName} with description: ${featureDescription}`);
+      
+      // Validate input
+      if (!featureName || !featureDescription) {
+        console.error('Invalid feature data: name and description are required');
+        return false;
+      }
+
+      // Check if feature already exists
+      const existingFeature = this.getFeatureByName(featureName);
+      if (existingFeature) {
+        console.warn(`Feature with name "${featureName}" already exists`);
+        return false;
+      }
+
+      // Create new feature object
+      const newFeature: Feature = {
+        feature_name: featureName,
+        feature_description: featureDescription
+      };
+
+      // Add to memory
+      this.features.push(newFeature);
+      console.log(`Feature added to memory: ${featureName}`);
+
+      // Add to CSV file
+      const featuresPath = getCSVPath('features.csv');
+      console.log(`Writing feature to CSV: ${featuresPath}`);
+      
+      // Read existing CSV content
+      let csvContent = '';
+      if (fs.existsSync(featuresPath)) {
+        csvContent = fs.readFileSync(featuresPath, 'utf8');
+        // Remove trailing newline if exists
+        csvContent = csvContent.replace(/\n$/, '');
+      } else {
+        // Create new CSV with headers
+        csvContent = 'feature_name,feature_description\n';
+      }
+
+      // Add new feature row
+      const newRow = `"${featureName}","${featureDescription}"`;
+      csvContent += `\n${newRow}`;
+
+      // Write back to CSV
+      fs.writeFileSync(featuresPath, csvContent, 'utf8');
+      console.log(`Feature successfully written to CSV: ${featureName}`);
+
+      return true;
+    } catch (error) {
+      console.error('Error adding feature to CSV:', error);
+      // Remove from memory if CSV write failed
+      this.features = this.features.filter(f => f.feature_name !== featureName);
+      return false;
+    }
+  }
 }

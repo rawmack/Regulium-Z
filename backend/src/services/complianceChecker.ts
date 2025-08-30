@@ -1,4 +1,3 @@
-import OpenAI from 'openai';
 import * as fs from 'fs';
 import * as path from 'path';
 import { DataHandler } from './dataHandler';
@@ -12,19 +11,20 @@ import {
 } from '../types';
 
 export class ComplianceChecker {
-  private openai: OpenAI;
   private dataHandler: DataHandler;
   private feedbackHandler: FeedbackHandler;
   private abbreviations: { [key: string]: string } = {};
 
   constructor() {
-    this.openai = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY,
-      baseURL: process.env.OPENAI_API_BASE,
-    });
     this.dataHandler = new DataHandler();
     this.feedbackHandler = new FeedbackHandler();
     this.loadAbbreviations();
+    
+    // Log configuration for debugging
+    console.log('ComplianceChecker initialized with:');
+    console.log('- API Base URL:', process.env.OPENAI_API_BASE);
+    console.log('- Model:', process.env.OPENAI_MODEL);
+    console.log('- API Key exists:', !!process.env.OPENAI_API_KEY);
   }
 
   private loadAbbreviations(): void {
@@ -95,7 +95,8 @@ export class ComplianceChecker {
           total_laws: targetLaws.length,
           compliant_count: compliantCount,
           non_compliant_count: nonCompliantCount,
-          review_required_count: reviewRequiredCount
+          review_required_count: reviewRequiredCount,
+          overall_risk_score: this.calculateRiskScore(compliantCount, nonCompliantCount, reviewRequiredCount, targetLaws.length)
         },
         timestamp: new Date().toISOString()
       };
@@ -105,7 +106,7 @@ export class ComplianceChecker {
     }
   }
 
-  private async checkFeatureCompliance(
+  public async checkFeatureCompliance(
     feature: Feature, 
     law: Law, 
     request: ComplianceCheckRequest
@@ -123,28 +124,66 @@ export class ComplianceChecker {
       // Build the prompt for GPT
       const prompt = this.buildCompliancePrompt(feature, law, correctionsContext);
       
-      const completion = await this.openai.chat.completions.create({
-        model: process.env.OPENAI_MODEL || 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a regulatory compliance expert. Analyze the feature implementation against the law requirements and provide a detailed compliance assessment.'
-          },
-          {
-            role: 'user',
-            content: prompt
-          }
-        ],
-        temperature: 0.3,
-        max_tokens: 400
+      // Call OpenRouter API directly
+      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
+          "HTTP-Referer": "http://localhost:8000", // Site URL for rankings
+          "X-Title": "Regulium-Z Compliance Checker", // Site title for rankings
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          "model": "google/gemini-2.0-flash-001",
+          "messages": [
+            {
+              "role": "system",
+              "content": "You are a regulatory compliance expert specializing in digital services, social media, and online platform regulations. Analyze the feature implementation against the law requirements and provide a comprehensive compliance assessment. Always respond in valid JSON format."
+            },
+            {
+              "role": "user",
+              "content": prompt
+            }
+          ],
+          "temperature": 0.3,
+          "max_tokens": 1000, // Increased significantly with available credits
+          "stream": false // Disable streaming to get complete response
+        })
       });
 
-      const response = completion.choices[0]?.message?.content || '';
-      const parsedResult = this.parseGPTResponse(response, feature, law);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({})) as any;
+        throw new Error(`OpenRouter API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
+      }
+
+      const completion = await response.json() as any;
+      console.log(`Raw OpenRouter response for ${feature.feature_name} vs ${law.law_title}:`, JSON.stringify(completion, null, 2));
+      
+      const responseContent = completion.choices?.[0]?.message?.content || '';
+      console.log(`LLM response received for ${feature.feature_name} vs ${law.law_title}:`, responseContent);
+      console.log(`Response length: ${responseContent.length} characters`);
+      console.log(`Response type: ${typeof responseContent}`);
+      
+      const parsedResult = this.parseGPTResponse(responseContent, feature, law);
 
       return parsedResult;
     } catch (error) {
       console.error(`Error checking compliance for feature ${feature.feature_name} against law ${law.law_title}:`, error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : 'No stack trace',
+        name: error instanceof Error ? error.name : 'Unknown error type'
+      });
+      
+      // Log additional error information if it's an API error
+      if (error && typeof error === 'object' && 'response' in error) {
+        const apiError = error as any;
+        console.error('API Error Response:', {
+          status: apiError.response?.status,
+          statusText: apiError.response?.statusText,
+          data: apiError.response?.data
+        });
+      }
       
       // Return a fallback result
       return {
@@ -159,24 +198,27 @@ export class ComplianceChecker {
   }
 
   private buildCompliancePrompt(feature: Feature, law: Law, correctionsContext: string): string {
-    const abbreviationsContext = Object.entries(this.abbreviations)
-      .map(([abbr, full]) => `${abbr}: ${full}`)
-      .join(', ');
+    return `Feature: ${feature.feature_name}
+Description: ${feature.feature_description}
 
-    return `Analyze compliance for this feature against the law.
+Law: ${law.law_title}
+Description: ${law.law_description}
 
-FEATURE: ${feature.feature_name}
-LAW: ${law.law_title} (${law['country-region']})
 ${correctionsContext}
 
-You must respond with ONLY valid JSON in this exact format:
+Analyze the compliance of this feature against the law. Consider:
+1. Does the feature implementation align with the law's requirements?
+2. Are there any potential violations or compliance gaps?
+3. What specific aspects need attention?
+
+Respond in this exact JSON format:
 {
-  "compliance_status": "compliant|non-compliant|requires_review",
-  "reasoning": "Detailed explanation of your assessment",
-  "recommendations": ["Array of specific recommendations"]
+  "compliance_status": "compliant|non_compliant|requires_review",
+  "reasoning": "Detailed explanation of compliance assessment",
+  "recommendations": ["Specific action item 1", "Specific action item 2", "Specific action item 3"]
 }
 
-Do not include any text before or after the JSON. Only return the JSON object.`;
+Ensure the response is valid JSON with no additional text before or after.`;
   }
 
   private parseGPTResponse(response: string, feature: Feature, law: Law): ComplianceResult {
@@ -184,29 +226,48 @@ Do not include any text before or after the JSON. Only return the JSON object.`;
       // Log the raw response for debugging
       console.log(`Raw response for ${feature.feature_name} vs ${law.law_title}:`, response.substring(0, 200) + '...');
       
+      // Clean the response - remove any markdown formatting
+      let cleanResponse = response.trim();
+      if (cleanResponse.startsWith('```json')) {
+        cleanResponse = cleanResponse.replace(/^```json\s*/, '').replace(/\s*```$/, '');
+      } else if (cleanResponse.startsWith('```')) {
+        cleanResponse = cleanResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+      }
+      
       // Try to extract JSON from the response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = cleanResponse.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-                // Validate required fields
-        if (parsed.compliance_status && parsed.reasoning && parsed.recommendations) {
-          return {
-            feature_name: feature.feature_name,
-            law_title: law.law_title,
-            law_description: law.law_description,
-            compliance_status: parsed.compliance_status,
-            reasoning: parsed.reasoning,
-            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually']
-          };
-        } else {
-          console.warn('JSON response missing required fields:', parsed);
+        try {
+          const parsed = JSON.parse(jsonMatch[0]);
+          
+          // Validate required fields
+          if (parsed.compliance_status && parsed.reasoning && parsed.recommendations) {
+            // Validate compliance_status values
+            const validStatuses = ['compliant', 'non_compliant', 'requires_review'];
+            if (!validStatuses.includes(parsed.compliance_status)) {
+              console.warn(`Invalid compliance_status: ${parsed.compliance_status}, defaulting to requires_review`);
+              parsed.compliance_status = 'requires_review';
+            }
+            
+            return {
+              feature_name: feature.feature_name,
+              law_title: law.law_title,
+              law_description: law.law_description,
+              compliance_status: parsed.compliance_status,
+              reasoning: parsed.reasoning,
+              recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually']
+            };
+          } else {
+            console.warn('JSON response missing required fields:', parsed);
+          }
+        } catch (jsonError) {
+          console.warn('Failed to parse extracted JSON:', jsonError);
         }
       } else {
         console.warn('No JSON found in response');
       }
     } catch (error) {
-      console.warn('Failed to parse GPT response as JSON:', error);
+      console.warn('Failed to parse GPT response:', error);
     }
 
     // Fallback parsing
@@ -220,7 +281,14 @@ Do not include any text before or after the JSON. Only return the JSON object.`;
     };
   }
 
-
+  private calculateRiskScore(compliantCount: number, nonCompliantCount: number, reviewRequiredCount: number, totalLaws: number): number {
+    const totalChecks = compliantCount + nonCompliantCount + reviewRequiredCount;
+    if (totalChecks === 0) {
+      return 0; // No checks performed
+    }
+    const riskScore = (nonCompliantCount + reviewRequiredCount) / totalChecks;
+    return Math.round(riskScore * 100); // Scale to 0-100
+  }
 
   public async refreshData(): Promise<void> {
     await this.dataHandler.refreshData();

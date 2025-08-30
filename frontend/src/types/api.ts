@@ -26,6 +26,13 @@ export interface ComplianceCheckRequest {
   include_corrections?: boolean;
 }
 
+export interface SingleFeatureComplianceRequest {
+  feature_name: string;
+  feature_description: string;
+  include_abbreviations?: boolean;
+  include_corrections?: boolean;
+}
+
 export interface ComplianceCheckResponse {
   results: ComplianceResult[];
   summary: {
