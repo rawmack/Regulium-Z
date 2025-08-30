@@ -20,6 +20,7 @@ export class ComplianceChecker {
   constructor() {
     this.openai = new OpenAI({
       apiKey: process.env.OPENAI_API_KEY,
+      baseURL: process.env.OPENAI_API_BASE,
     });
     this.dataHandler = new DataHandler();
     this.feedbackHandler = new FeedbackHandler();
@@ -141,7 +142,7 @@ export class ComplianceChecker {
           }
         ],
         temperature: 0.3,
-        max_tokens: 1000
+        max_tokens: 400
       });
 
       const response = completion.choices[0]?.message?.content || '';
@@ -169,22 +170,13 @@ export class ComplianceChecker {
       .map(([abbr, full]) => `${abbr}: ${full}`)
       .join(', ');
 
-    return `
-Please analyze the compliance of this feature against the specified law.
+    return `Analyze compliance for this feature against the law.
 
-FEATURE:
-- Name: ${feature.feature_name}
-- Description: ${feature.feature_description}
-
-LAW:
-- Title: ${law.law_title}
-- Description: ${law.law_description}
-- Country/Region: ${law['country-region']}
-
-ABBREVIATIONS CONTEXT: ${abbreviationsContext}
+FEATURE: ${feature.feature_name}
+LAW: ${law.law_title} (${law['country-region']})
 ${correctionsContext}
 
-Please provide your analysis in the following JSON format:
+You must respond with ONLY valid JSON in this exact format:
 {
   "compliance_status": "compliant|non-compliant|requires_review",
   "confidence_score": 0.0-1.0,
@@ -193,30 +185,35 @@ Please provide your analysis in the following JSON format:
   "risk_level": "low|medium|high"
 }
 
-Focus on:
-1. Whether the feature implementation meets the law's requirements
-2. Any gaps or compliance issues
-3. Specific recommendations for achieving compliance
-4. Risk assessment based on the feature's implementation details
-`;
+Do not include any text before or after the JSON. Only return the JSON object.`;
   }
 
   private parseGPTResponse(response: string, feature: Feature, law: Law): ComplianceResult {
     try {
+      // Log the raw response for debugging
+      console.log(`Raw response for ${feature.feature_name} vs ${law.law_title}:`, response.substring(0, 200) + '...');
+      
       // Try to extract JSON from the response
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         
-        return {
-          feature_name: feature.feature_name,
-          law_title: law.law_title,
-          compliance_status: parsed.compliance_status || 'requires_review',
-          confidence_score: parsed.confidence_score || 0.5,
-          reasoning: parsed.reasoning || 'Analysis completed but response format was unclear',
-          recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually'],
-          risk_level: parsed.risk_level || 'medium'
-        };
+        // Validate required fields
+        if (parsed.compliance_status && parsed.confidence_score !== undefined && parsed.reasoning && parsed.recommendations && parsed.risk_level) {
+          return {
+            feature_name: feature.feature_name,
+            law_title: law.law_title,
+            compliance_status: parsed.compliance_status,
+            confidence_score: parsed.confidence_score,
+            reasoning: parsed.reasoning,
+            recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually'],
+            risk_level: parsed.risk_level
+          };
+        } else {
+          console.warn('JSON response missing required fields:', parsed);
+        }
+      } else {
+        console.warn('No JSON found in response');
       }
     } catch (error) {
       console.warn('Failed to parse GPT response as JSON:', error);
