@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ComplianceResult, ComplianceSummary } from '../types/api';
-import { CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, MessageSquare } from 'lucide-react';
+import { CheckCircle, XCircle, AlertCircle, ChevronDown, ChevronRight, MessageSquare, Scale, Target, AlertTriangle } from 'lucide-react';
 
 interface ComplianceTableProps {
   results: ComplianceResult[];
@@ -52,27 +52,27 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Total Features</p>
-              <p className="text-2xl font-bold text-gray-900">{summary.total_features}</p>
-            </div>
-            <div className="p-2 bg-primary-100 rounded-lg">
-              <div className="w-6 h-6 bg-primary-600 rounded"></div>
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="card">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Total Laws</p>
               <p className="text-2xl font-bold text-gray-900">{summary.total_laws}</p>
             </div>
-            <div className="p-2 bg-primary-100 rounded-lg">
-              <div className="w-6 h-6 bg-primary-600 rounded"></div>
+            <div className="p-2 bg-gray-100 rounded-lg">
+              <Scale className="w-6 h-6 text-gray-600" />
+            </div>
+          </div>
+        </div>
+        
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Relevant Laws</p>
+              <p className="text-2xl font-bold text-blue-600">{summary.relevant_laws || 0}</p>
+            </div>
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <Target className="w-6 h-6 text-blue-600" />
             </div>
           </div>
         </div>
@@ -101,7 +101,17 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
           </div>
         </div>
 
-
+        <div className="card">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">Review Required</p>
+              <p className="text-2xl font-bold text-warning-600">{summary.review_required_count}</p>
+            </div>
+            <div className="p-2 bg-warning-100 rounded-lg">
+              <AlertTriangle className="w-6 h-6 text-warning-600" />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Results Table */}

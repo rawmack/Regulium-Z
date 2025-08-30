@@ -31,6 +31,7 @@ export interface ComplianceCheckResponse {
   summary: {
     total_features: number;
     total_laws: number;
+    relevant_laws: number;
     compliant_count: number;
     non_compliant_count: number;
     review_required_count: number;

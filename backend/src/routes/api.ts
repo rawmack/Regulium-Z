@@ -9,6 +9,7 @@ import {
   FeedbackRequest,
   FeedbackResponse 
 } from '../types';
+import { Feature, ComplianceResult } from '../types'; // Added missing imports
 
 const router = Router();
 
@@ -243,101 +244,122 @@ router.post('/compliance/check', async (req: Request, res: Response) => {
 // Check compliance of single feature against all laws
 router.post('/compliance/check-feature', async (req: Request, res: Response) => {
   try {
-    const { feature_name, feature_description, include_abbreviations, include_corrections } = req.body;
+    const { feature_name, feature_description } = req.body;
     
-    // Validate request
     if (!feature_name || !feature_description) {
-      return res.status(400).json({
-        success: false,
-        error: 'Missing required fields: feature_name and feature_description are required'
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Missing required fields: feature_name and feature_description are required' 
       });
     }
 
-    console.log('Checking compliance for new feature:', { feature_name, feature_description });
+    console.log(`Starting compliance check for feature: ${feature_name}`);
     
-    // Create a compliance check request for this single feature against all laws
-    // Note: Don't pass features array to check against ALL laws
-    const complianceRequest = {
-      include_abbreviations: include_abbreviations ?? true,
-      include_corrections: include_corrections ?? true
+    // Create a temporary feature object for compliance checking
+    const tempFeature: Feature = {
+      feature_name,
+      feature_description
     };
 
-    console.log('Compliance check request:', complianceRequest);
+    // Get all laws and features
+    const allLaws = getDataHandler().getLaws();
+    const allFeatures = getDataHandler().getFeatures();
     
-    // Get the compliance checker and create a temporary feature for checking
+    console.log(`Total laws available: ${allLaws.length}`);
+    console.log(`Total features available: ${allFeatures.length}`);
+
+    // Step 1: Screen laws for relevance
+    console.log('Step 1: Screening laws for relevance...');
     const complianceChecker = getComplianceChecker();
-    const tempFeature = { feature_name, feature_description };
+    const relevantLawTitles = await complianceChecker.screenLawsForRelevance(tempFeature, allLaws);
     
-    // Get all laws
-    const dataHandler = getDataHandler();
-    if (!dataHandler.isReady()) {
-      await dataHandler.waitForReady();
+    if (relevantLawTitles.length === 0) {
+      console.log('No relevant laws found for this feature');
+      return res.json({
+        success: true,
+        data: {
+          results: [],
+          summary: {
+            total_features: 1,
+            total_laws: allLaws.length,
+            relevant_laws: 0,
+            compliant_count: 0,
+            non_compliant_count: 0,
+            review_required_count: 0,
+            overall_risk_score: 0
+          },
+          timestamp: new Date().toISOString()
+        }
+      });
     }
-    const allLaws = dataHandler.getLaws();
+
+    // Step 2: Filter laws to only relevant ones
+    const relevantLaws = allLaws.filter(law => relevantLawTitles.includes(law.law_title));
+    console.log(`Step 2: Found ${relevantLaws.length} relevant laws for compliance checking`);
+
+    // Step 3: Check compliance against relevant laws only
+    console.log('Step 3: Checking compliance against relevant laws...');
+    const results: ComplianceResult[] = [];
     
-    console.log(`Checking compliance for feature "${feature_name}" against ${allLaws.length} laws`);
-    
-    // Check compliance against all laws
-    const results = [];
-    let compliantCount = 0;
-    let nonCompliantCount = 0;
-    let reviewRequiredCount = 0;
-    
-    for (const law of allLaws) {
+    for (const law of relevantLaws) {
       try {
+        console.log(`Checking compliance for ${tempFeature.feature_name} against ${law.law_title}`);
+        const complianceRequest = {
+          include_abbreviations: true,
+          include_corrections: true
+        };
         const result = await complianceChecker.checkFeatureCompliance(tempFeature, law, complianceRequest);
         results.push(result);
-        
-        switch (result.compliance_status) {
-          case 'compliant':
-            compliantCount++;
-            break;
-          case 'non-compliant':
-            nonCompliantCount++;
-            break;
-          case 'requires_review':
-            reviewRequiredCount++;
-            break;
-        }
       } catch (error) {
-        console.error(`Error checking compliance for feature ${feature_name} against law ${law.law_title}:`, error);
-        // Add fallback result
+        console.error(`Error checking compliance for feature ${tempFeature.feature_name} against law ${law.law_title}:`, error);
+        
+        // Add fallback result for this law
         results.push({
-          feature_name,
+          feature_name: tempFeature.feature_name,
           law_title: law.law_title,
           law_description: law.law_description,
-          compliance_status: 'requires_review' as const,
-          reasoning: 'Error occurred during compliance check. Manual review required.',
-          recommendations: ['Review the feature implementation manually', 'Check system logs for errors']
+          compliance_status: "requires_review",
+          reasoning: "Error occurred during compliance check. Manual review required.",
+          recommendations: ["Review the feature implementation manually", "Check system logs for errors"]
         });
-        reviewRequiredCount++;
       }
     }
+
+    // Calculate summary statistics
+    const compliantCount = results.filter(r => r.compliance_status === "compliant").length;
+    const nonCompliantCount = results.filter(r => r.compliance_status === "non-compliant").length;
+    const reviewRequiredCount = results.filter(r => r.compliance_status === "requires_review").length;
     
-    const complianceResponse = {
-      results,
-      summary: {
-        total_features: 1,
-        total_laws: allLaws.length,
-        compliant_count: compliantCount,
-        non_compliant_count: nonCompliantCount,
-        review_required_count: reviewRequiredCount,
-        overall_risk_score: Math.round(((nonCompliantCount + reviewRequiredCount) / allLaws.length) * 100)
-      },
-      timestamp: new Date().toISOString()
-    };
-    
+    const overallRiskScore = Math.round(
+      ((nonCompliantCount * 100) + (reviewRequiredCount * 50)) / relevantLaws.length
+    );
+
     console.log('Compliance check completed successfully');
-    
-    return res.json({
+    console.log(`Results: ${compliantCount} compliant, ${nonCompliantCount} non-compliant, ${reviewRequiredCount} need review`);
+    console.log(`Overall risk score: ${overallRiskScore}`);
+
+    res.json({
       success: true,
-      data: complianceResponse
+      data: {
+        results,
+        summary: {
+          total_features: 1,
+          total_laws: allLaws.length,
+          relevant_laws: relevantLaws.length,
+          compliant_count: compliantCount,
+          non_compliant_count: nonCompliantCount,
+          review_required_count: reviewRequiredCount,
+          overall_risk_score: overallRiskScore
+        },
+        timestamp: new Date().toISOString()
+      }
     });
+
   } catch (error) {
-    console.error('Error in single feature compliance check:', error);
-    return res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Failed to perform compliance check'
+    console.error('Error in compliance check:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: error instanceof Error ? error.message : 'Internal server error during compliance check' 
     });
   }
 });
