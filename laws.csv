@@ -1,0 +1,60 @@
+index,law_description,law_title,country-region
+1,Platforms must remove illegal content once notified (“notice-and-action”).,Digital Services Act (DSA),European Union
+2,Platforms must provide transparency reports on content moderation and removal decisions.,Digital Services Act (DSA),European Union
+3,Platforms must disclose how algorithms and recommendation systems work to regulators.,Digital Services Act (DSA),European Union
+4,Platforms must disclose transparency around targeted advertising practices.,Digital Services Act (DSA),European Union
+5,Very Large Online Platforms must implement systemic risk management and undergo independent audits.,Digital Services Act (DSA),European Union
+6,Users must be offered redress/appeal mechanisms for content removal decisions.,Digital Services Act (DSA),European Union
+7,Intermediary liability applies once platforms have actual notice and fail to act (conditional liability).,Digital Services Act (DSA),European Union
+8,Platforms must assess and mitigate disinformation and other systemic risks.,Digital Services Act (DSA),European Union
+9,Platforms must not use minors’ data for targeted advertising.,Digital Services Act (DSA),European Union
+10,Users have the right to seek compensation for damages from platform decisions.,Digital Services Act (DSA),European Union
+11,Platforms must comply with tougher auditing and compliance monitoring by regulators.,Digital Services Act (DSA),European Union
+12,Non‑compliance can trigger fines up to 6% of global annual turnover.,Digital Services Act (DSA),European Union
+13,"Persistent, serious infringements can lead to temporary service suspension.",Digital Services Act (DSA),European Union
+14,"Platforms must address addictive design features that pose risks to users (e.g., rewards features).",Digital Services Act (DSA),European Union
+15,Content rules must balance free expression with removal of illegal/harmful content (ECtHR‑influenced proportionality).,Digital Services Act (DSA),European Union
+16,Providing an “addictive feed” to minors is unlawful unless there is verifiable parental consent or no knowledge the user is a minor (pre‑2027).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+17,"From Jan 1, 2027, platforms must reasonably determine a user is not a minor or obtain verifiable parental consent before providing addictive feeds.",SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+18,No notifications to minors between 12:00–06:00 (local time) unless parental consent.,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+19,"No notifications to minors 08:00–15:00 (Mon–Fri, Sep–May, local time) unless parental consent.",SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+20,Default‑on parental control: limit night access (12:00–06:00).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+21,Default‑on parental control: limit daily time on addictive feeds (default 1 hour/day unless parent changes).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+22,Default‑on parental control: hide like/feedback counts in addictive feeds.,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+23,Default feed for minors must be non‑personalized (not based on user/device data aside from age/minor status).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+24,Default‑on private account setting for minors.,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+25,Age‑assurance and parental‑consent data must be used only for compliance and deleted immediately after use (subject to law).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+26,Platforms may not penalize users for invoking protections (no degraded quality or price increases).,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+27,"Annual public disclosure: number of minor users, count with parental consent for addictive feed, and counts with/without controls enabled.",SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+28,Parental consent/controls do not waive platform liability for harms to minors’ mental health or well‑being.,SB 976 – Protecting Our Kids from Social Media Addiction Act,United States (CA)
+29,Platforms must prohibit children under 14 from creating accounts.,HB 3 – Online Protections for Minors,United States (FL)
+30,Platforms must terminate accounts held by users under 14 (with a 90‑day dispute window).,HB 3 – Online Protections for Minors,United States (FL)
+31,Parents/guardians must be able to request termination of <14 accounts (effective within 10 business days).,HB 3 – Online Protections for Minors,United States (FL)
+32,Platforms must delete personal information for terminated <14 accounts (unless retention is legally required).,HB 3 – Online Protections for Minors,United States (FL)
+33,Platforms must prohibit 14–15 year‑olds from creating accounts unless a parent/guardian consents.,HB 3 – Online Protections for Minors,United States (FL)
+34,Platforms must terminate 14–15 accounts if no parental consent; 90‑day dispute window applies.,HB 3 – Online Protections for Minors,United States (FL)
+35,14–15 year‑old users must be able to request termination (effective within 5 business days).,HB 3 – Online Protections for Minors,United States (FL)
+36,Parents/guardians must be able to request termination of 14–15 accounts (effective within 10 business days).,HB 3 – Online Protections for Minors,United States (FL)
+37,Platforms must delete personal information for terminated 14–15 accounts (unless retention is legally required).,HB 3 – Online Protections for Minors,United States (FL)
+38,Sites with >33.3% harmful‑to‑minors content must use anonymous or standard age verification to block minors.,HB 3 – Online Protections for Minors,United States (FL)
+39,"Age‑verification providers may not retain, repurpose, or share verification data; must secure it.",HB 3 – Online Protections for Minors,United States (FL)
+40,"After a report of unauthorized access to harmful content, entities must prevent the minor’s future access.",HB 3 – Online Protections for Minors,United States (FL)
+41,Platforms must verify age of all users in Utah or delete accounts.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+42,Users under 18 must have parental consent; parents must be able to access and monitor the account.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+43,Platforms are prohibited from collecting activity‑based data from minors except where legally required.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+44,No targeted advertising or algorithmic recommendations may be shown to minors.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+45,"Without parental consent, minors cannot access services between 10:30 p.m. and 6:30 a.m.",Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+46,Platforms must not expose minors to “addictive” features; must conduct quarterly audits.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+47,Platforms may be sued for harms from addictive features; presumption of harm applies if plaintiff is 16 or younger.,Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+48,"Violations can incur fines of $2,500 per violation (SB 152); addiction‑related liabilities up to $250,000 plus $2,500 per‑user.",Utah Social Media Regulation Act (SB 152/HB 311),United States (UT)
+49,"Upon actual knowledge of apparent child sexual exploitation offenses, providers must report to NCMEC CyberTipline as soon as reasonably possible and provide provider contact info.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+50,Providers may report facts indicating planned or imminent violations related to child sexual exploitation to the CyberTipline.,18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+51,"Reports may include identity information (e.g., email, IP, URL, payment info excluding PII) of involved individuals.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+52,"Reports may include historical reference (timestamps, when/how content was uploaded/reported) and transmission data.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+53,"Reports may include geographic location information (e.g., IP‑based or verified address) if available.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+54,Reports may include visual depictions of apparent child sexual abuse material and the complete communication (including attachments).,18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+55,Submitting a report constitutes a request to preserve the reported materials for 1 year; providers must preserve commingled content as context.,18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+56,Providers must secure preserved materials and limit employee access to what’s necessary for compliance.,18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+57,"Within 1 year of enactment, preservation must align with NIST Cybersecurity Framework guidance.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+58,"Providers are not required to proactively monitor, search, or scan user content to find reportable material.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)
+59,"Failure to make required reports can result in fines up to $850k–$1M (large providers) or $600k–$850k (smaller providers), escalating for repeat violations.",18 U.S.C. § 2258A – Reporting requirements of providers,United States (Federal)

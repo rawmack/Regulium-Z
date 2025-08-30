@@ -1,0 +1,40 @@
+{
+  "name": "regulium-z-backend",
+  "version": "1.0.0",
+  "description": "Backend server for Regulium-Z compliance checking application",
+  "main": "dist/server.js",
+  "scripts": {
+    "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
+    "build": "tsc",
+    "start": "node dist/server.js",
+    "test": "jest"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "cors": "^2.8.5",
+    "helmet": "^7.1.0",
+    "dotenv": "^16.3.1",
+    "openai": "^4.20.1",
+    "csv-parser": "^3.0.0",
+    "multer": "^1.4.5-lts.1"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/node": "^20.10.0",
+    "@types/multer": "^1.4.11",
+    "typescript": "^5.3.0",
+    "ts-node-dev": "^2.0.0",
+    "jest": "^29.7.0",
+    "@types/jest": "^29.5.8"
+  },
+  "keywords": [
+    "compliance",
+    "api",
+    "express",
+    "typescript",
+    "gpt"
+  ],
+  "author": "",
+  "license": "MIT"
+}
