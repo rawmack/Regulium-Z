@@ -104,14 +104,14 @@ OPENAI_API_KEY=your_openai_api_key_here
 npm run dev
 
 # Or start them separately:
-npm run dev:backend    # Backend on http://localhost:3001
+npm run dev:backend    # Backend on http://localhost:8000
 npm run dev:frontend   # Frontend on http://localhost:3000
 ```
 
 ### 5. Access the Application
 - **Frontend**: http://localhost:3000
-- **Backend API**: http://localhost:3001/api
-- **API Documentation**: http://localhost:3001
+- **Backend API**: http://localhost:8000/api
+- **API Documentation**: http://localhost:8000
 
 ## 🔧 Configuration
 
@@ -120,7 +120,7 @@ npm run dev:frontend   # Frontend on http://localhost:3000
 #### Backend (.env)
 ```bash
 # Server Configuration
-PORT=3001
+PORT=8000
 NODE_ENV=development
 
 # OpenAI Configuration

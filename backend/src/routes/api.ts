@@ -10,31 +10,80 @@ import {
 } from '../types';
 
 const router = Router();
-const complianceChecker = new ComplianceChecker();
-const feedbackHandler = new FeedbackHandler();
-const dataHandler = new DataHandler();
+
+// Lazy-load services to avoid instantiation before environment variables are loaded
+let complianceChecker: ComplianceChecker | null = null;
+let feedbackHandler: FeedbackHandler | null = null;
+let dataHandler: DataHandler | null = null;
+
+const getComplianceChecker = () => {
+  if (!complianceChecker) {
+    complianceChecker = new ComplianceChecker();
+  }
+  return complianceChecker;
+};
+
+const getFeedbackHandler = () => {
+  if (!feedbackHandler) {
+    feedbackHandler = new FeedbackHandler();
+  }
+  return feedbackHandler;
+};
+
+const getDataHandler = () => {
+  if (!dataHandler) {
+    dataHandler = new DataHandler();
+  }
+  return dataHandler;
+};
 
 // Health check endpoint
 router.get('/health', (req: Request, res: Response) => {
-  res.json({ 
-    status: 'healthy', 
+  const handler = getDataHandler();
+  const fs = require('fs');
+  const path = require('path');
+  
+  const lawsPath = path.resolve('../laws.csv');
+  const featuresPath = path.resolve('../features.csv');
+  
+  return res.json({
+    status: 'healthy',
     timestamp: new Date().toISOString(),
-    service: 'Regulium-Z Backend'
+    service: 'Regulium-Z Backend',
+    dataReady: handler.isReady(),
+    lawsCount: handler.getLaws().length,
+    featuresCount: handler.getFeatures().length,
+    handlerCreated: !!handler,
+    handlerType: handler.constructor.name,
+    lawsPath: lawsPath,
+    featuresPath: featuresPath,
+    lawsExists: fs.existsSync(lawsPath),
+    featuresExists: fs.existsSync(featuresPath),
+    lawsSize: fs.existsSync(lawsPath) ? fs.statSync(lawsPath).size : 0,
+    featuresSize: fs.existsSync(featuresPath) ? fs.statSync(featuresPath).size : 0
   });
 });
 
 // Get all laws
 router.get('/laws', (req: Request, res: Response) => {
+  if (!getDataHandler().isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Data not yet loaded. Please try again in a moment.',
+      dataReady: false
+    });
+  }
+  
   try {
-    const laws = dataHandler.getLaws();
-    res.json({
+    const laws = getDataHandler().getLaws();
+    return res.json({
       success: true,
       data: laws,
       count: laws.length
     });
   } catch (error) {
     console.error('Error fetching laws:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch laws'
     });
@@ -43,62 +92,70 @@ router.get('/laws', (req: Request, res: Response) => {
 
 // Get all features
 router.get('/features', (req: Request, res: Response) => {
+  if (!getDataHandler().isReady()) {
+    return res.status(503).json({
+      success: false,
+      error: 'Data not yet loaded. Please try again in a moment.',
+      dataReady: false
+    });
+  }
+  
   try {
-    const features = dataHandler.getFeatures();
-    res.json({
+    const features = getDataHandler().getFeatures();
+    return res.json({
       success: true,
       data: features,
       count: features.length
     });
   } catch (error) {
     console.error('Error fetching features:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch features'
     });
   }
 });
 
-// Get law by ID
-router.get('/laws/:id', (req: Request, res: Response) => {
+// Get law by title
+router.get('/laws/:title', (req: Request, res: Response) => {
   try {
-    const law = dataHandler.getLawById(req.params.id);
+    const law = getDataHandler().getLawByTitle(req.params.title);
     if (!law) {
       return res.status(404).json({
         success: false,
         error: 'Law not found'
       });
     }
-    res.json({
+    return res.json({
       success: true,
       data: law
     });
   } catch (error) {
     console.error('Error fetching law:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch law'
     });
   }
 });
 
-// Get feature by ID
-router.get('/features/:id', (req: Request, res: Response) => {
+// Get feature by name
+router.get('/features/:name', (req: Request, res: Response) => {
   try {
-    const feature = dataHandler.getFeatureById(req.params.id);
+    const feature = getDataHandler().getFeatureByName(req.params.name);
     if (!feature) {
       return res.status(404).json({
         success: false,
         error: 'Feature not found'
       });
     }
-    res.json({
+    return res.json({
       success: true,
       data: feature
     });
   } catch (error) {
     console.error('Error fetching feature:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch feature'
     });
@@ -120,15 +177,15 @@ router.post('/compliance/check', async (req: Request, res: Response) => {
 
     console.log('Starting compliance check with request:', request);
     
-    const result: ComplianceCheckResponse = await complianceChecker.checkCompliance(request);
+    const result: ComplianceCheckResponse = await getComplianceChecker().checkCompliance(request);
     
-    res.json({
+    return res.json({
       success: true,
       data: result
     });
   } catch (error) {
     console.error('Error in compliance check:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Failed to perform compliance check'
     });
@@ -141,29 +198,29 @@ router.post('/feedback', async (req: Request, res: Response) => {
     const feedback: FeedbackRequest = req.body;
     
     // Validate request
-    if (!feedback || !feedback.feature_id || !feedback.law_id || !feedback.message) {
+    if (!feedback || !feedback.feature_name || !feedback.law_title || !feedback.message) {
       return res.status(400).json({
         success: false,
-        error: 'Missing required fields: feature_id, law_id, and message are required'
+        error: 'Missing required fields: feature_name, law_title, and message are required'
       });
     }
 
-    const result: FeedbackResponse = await feedbackHandler.submitFeedback(feedback);
+    const result: FeedbackResponse = await getFeedbackHandler().submitFeedback(feedback);
     
     if (result.success) {
-      res.status(201).json({
+      return res.status(201).json({
         success: true,
         data: result
       });
     } else {
-      res.status(400).json({
+      return res.status(400).json({
         success: false,
         error: result.message
       });
     }
   } catch (error) {
     console.error('Error submitting feedback:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to submit feedback'
     });
@@ -173,15 +230,15 @@ router.post('/feedback', async (req: Request, res: Response) => {
 // Get all feedback
 router.get('/feedback', (req: Request, res: Response) => {
   try {
-    const feedback = feedbackHandler.getFeedback();
-    res.json({
+    const feedback = getFeedbackHandler().getFeedback();
+    return res.json({
       success: true,
       data: feedback,
       count: feedback.length
     });
   } catch (error) {
     console.error('Error fetching feedback:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch feedback'
     });
@@ -189,17 +246,17 @@ router.get('/feedback', (req: Request, res: Response) => {
 });
 
 // Get feedback by feature
-router.get('/feedback/feature/:featureId', (req: Request, res: Response) => {
+router.get('/feedback/feature/:featureName', (req: Request, res: Response) => {
   try {
-    const feedback = feedbackHandler.getCorrectionsByFeature(req.params.featureId);
-    res.json({
+    const feedback = getFeedbackHandler().getCorrectionsByFeature(req.params.featureName);
+    return res.json({
       success: true,
       data: feedback,
       count: feedback.length
     });
   } catch (error) {
     console.error('Error fetching feedback by feature:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch feedback'
     });
@@ -207,17 +264,17 @@ router.get('/feedback/feature/:featureId', (req: Request, res: Response) => {
 });
 
 // Get feedback by law
-router.get('/feedback/law/:lawId', (req: Request, res: Response) => {
+router.get('/feedback/law/:lawTitle', (req: Request, res: Response) => {
   try {
-    const feedback = feedbackHandler.getCorrectionsByLaw(req.params.lawId);
-    res.json({
+    const feedback = getFeedbackHandler().getCorrectionsByLaw(req.params.lawTitle);
+    return res.json({
       success: true,
       data: feedback,
       count: feedback.length
     });
   } catch (error) {
     console.error('Error fetching feedback by law:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to fetch feedback'
     });
@@ -236,22 +293,22 @@ router.patch('/feedback/:feedbackId/status', (req: Request, res: Response) => {
       });
     }
 
-    const success = feedbackHandler.updateCorrectionStatus(req.params.feedbackId, status);
+    const success = getFeedbackHandler().updateCorrectionStatus(req.params.feedbackId, status);
     
     if (success) {
-      res.json({
+      return res.json({
         success: true,
         message: 'Feedback status updated successfully'
       });
     } else {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         error: 'Feedback not found or update failed'
       });
     }
   } catch (error) {
     console.error('Error updating feedback status:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to update feedback status'
     });
@@ -261,22 +318,22 @@ router.patch('/feedback/:feedbackId/status', (req: Request, res: Response) => {
 // Delete feedback
 router.delete('/feedback/:feedbackId', (req: Request, res: Response) => {
   try {
-    const success = feedbackHandler.deleteCorrection(req.params.feedbackId);
+    const success = getFeedbackHandler().deleteCorrection(req.params.feedbackId);
     
     if (success) {
-      res.json({
+      return res.json({
         success: true,
         message: 'Feedback deleted successfully'
       });
     } else {
-      res.status(404).json({
+      return res.status(404).json({
         success: false,
         error: 'Feedback not found or deletion failed'
       });
     }
   } catch (error) {
     console.error('Error deleting feedback:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to delete feedback'
     });
@@ -286,14 +343,14 @@ router.delete('/feedback/:feedbackId', (req: Request, res: Response) => {
 // Refresh data endpoint
 router.post('/data/refresh', async (req: Request, res: Response) => {
   try {
-    await complianceChecker.refreshData();
-    res.json({
+    await getComplianceChecker().refreshData();
+    return res.json({
       success: true,
       message: 'Data refreshed successfully'
     });
   } catch (error) {
     console.error('Error refreshing data:', error);
-    res.status(500).json({
+    return res.status(500).json({
       success: false,
       error: 'Failed to refresh data'
     });

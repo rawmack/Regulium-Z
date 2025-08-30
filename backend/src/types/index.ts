@@ -1,26 +1,18 @@
 export interface Law {
-  law_id: string;
-  law_name: string;
+  index: string;
   law_description: string;
-  compliance_requirements: string;
-  penalties: string;
-  effective_date: string;
+  law_title: string;
+  'country-region': string;
 }
 
 export interface Feature {
-  feature_id: string;
   feature_name: string;
   feature_description: string;
-  implementation_details: string;
-  risk_level: string;
-  priority: string;
 }
 
 export interface ComplianceResult {
-  feature_id: string;
   feature_name: string;
-  law_id: string;
-  law_name: string;
+  law_title: string;
   compliance_status: 'compliant' | 'non-compliant' | 'requires_review';
   confidence_score: number;
   reasoning: string;
@@ -49,8 +41,8 @@ export interface ComplianceCheckResponse {
 }
 
 export interface FeedbackRequest {
-  feature_id: string;
-  law_id: string;
+  feature_name: string;
+  law_title: string;
   feedback_type: 'correction' | 'suggestion' | 'question';
   message: string;
   user_email?: string;
@@ -68,8 +60,8 @@ export interface Abbreviation {
 
 export interface Correction {
   id: string;
-  feature_id: string;
-  law_id: string;
+  feature_name: string;
+  law_title: string;
   feedback_type: string;
   message: string;
   user_email?: string;

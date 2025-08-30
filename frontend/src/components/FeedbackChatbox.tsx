@@ -31,8 +31,8 @@ const FeedbackChatbox: React.FC<FeedbackChatboxProps> = ({
 
     try {
       const feedback: FeedbackRequest = {
-        feature_id: result.feature_id,
-        law_id: result.law_id,
+        feature_name: result.feature_name,
+        law_title: result.law_title,
         feedback_type: feedbackType,
         message: message.trim(),
         user_email: userEmail.trim() || undefined
@@ -93,7 +93,7 @@ const FeedbackChatbox: React.FC<FeedbackChatboxProps> = ({
             <h4 className="font-medium text-gray-900 mb-2">Compliance Check Context</h4>
             <div className="space-y-1 text-sm text-gray-600">
               <p><span className="font-medium">Feature:</span> {result.feature_name}</p>
-              <p><span className="font-medium">Law:</span> {result.law_name}</p>
+              <p><span className="font-medium">Law:</span> {result.law_title}</p>
               <p><span className="font-medium">Status:</span> 
                 <span className={`ml-1 ${
                   result.compliance_status === 'compliant' ? 'text-success-600' :

@@ -55,11 +55,11 @@ export class ComplianceChecker {
 
       // Filter features and laws based on request
       const targetFeatures = request.features 
-        ? features.filter(f => request.features!.includes(f.feature_id))
+        ? features.filter(f => request.features!.includes(f.feature_name))
         : features;
       
       const targetLaws = request.laws
-        ? laws.filter(l => request.laws!.includes(l.law_id))
+        ? laws.filter(l => request.laws!.includes(l.law_title))
         : laws;
 
       // Check each feature against each law
@@ -114,7 +114,7 @@ export class ComplianceChecker {
       // Get relevant corrections if requested
       let correctionsContext = '';
       if (request.include_corrections) {
-        const corrections = this.feedbackHandler.getCorrectionsForCompliance(feature.feature_id, law.law_id);
+        const corrections = this.feedbackHandler.getCorrectionsForCompliance(feature.feature_name, law.law_title);
         if (corrections.length > 0) {
           correctionsContext = `\n\nPrevious corrections for this feature-law combination:\n${corrections.map(c => `- ${c.message}`).join('\n')}`;
         }
@@ -144,19 +144,17 @@ export class ComplianceChecker {
 
       return parsedResult;
     } catch (error) {
-      console.error(`Error checking compliance for feature ${feature.feature_id} against law ${law.law_id}:`, error);
+      console.error(`Error checking compliance for feature ${feature.feature_name} against law ${law.law_title}:`, error);
       
       // Return a fallback result
       return {
-        feature_id: feature.feature_id,
         feature_name: feature.feature_name,
-        law_id: law.law_id,
-        law_name: law.law_name,
+        law_title: law.law_title,
         compliance_status: 'requires_review',
         confidence_score: 0,
         reasoning: 'Error occurred during compliance check. Manual review required.',
         recommendations: ['Review the feature implementation manually', 'Check system logs for errors'],
-        risk_level: feature.risk_level
+        risk_level: 'medium'
       };
     }
   }
@@ -170,20 +168,13 @@ export class ComplianceChecker {
 Please analyze the compliance of this feature against the specified law.
 
 FEATURE:
-- ID: ${feature.feature_id}
 - Name: ${feature.feature_name}
 - Description: ${feature.feature_description}
-- Implementation Details: ${feature.implementation_details}
-- Risk Level: ${feature.risk_level}
-- Priority: ${feature.priority}
 
 LAW:
-- ID: ${law.law_id}
-- Name: ${law.law_name}
+- Title: ${law.law_title}
 - Description: ${law.law_description}
-- Compliance Requirements: ${law.compliance_requirements}
-- Penalties: ${law.penalties}
-- Effective Date: ${law.effective_date}
+- Country/Region: ${law['country-region']}
 
 ABBREVIATIONS CONTEXT: ${abbreviationsContext}
 ${correctionsContext}
@@ -213,15 +204,13 @@ Focus on:
         const parsed = JSON.parse(jsonMatch[0]);
         
         return {
-          feature_id: feature.feature_id,
           feature_name: feature.feature_name,
-          law_id: law.law_id,
-          law_name: law.law_name,
+          law_title: law.law_title,
           compliance_status: parsed.compliance_status || 'requires_review',
           confidence_score: parsed.confidence_score || 0.5,
           reasoning: parsed.reasoning || 'Analysis completed but response format was unclear',
           recommendations: Array.isArray(parsed.recommendations) ? parsed.recommendations : ['Review implementation manually'],
-          risk_level: parsed.risk_level || feature.risk_level
+          risk_level: parsed.risk_level || 'medium'
         };
       }
     } catch (error) {
@@ -230,15 +219,13 @@ Focus on:
 
     // Fallback parsing
     return {
-      feature_id: feature.feature_id,
       feature_name: feature.feature_name,
-      law_id: law.law_id,
-      law_name: law.law_name,
+      law_title: law.law_title,
       compliance_status: 'requires_review',
       confidence_score: 0.3,
       reasoning: 'Response parsing failed. Manual review required.',
       recommendations: ['Review the feature implementation manually', 'Check compliance requirements'],
-      risk_level: feature.risk_level
+      risk_level: 'medium'
     };
   }
 

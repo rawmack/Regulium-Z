@@ -141,8 +141,8 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
               </tr>
             </thead>
             <tbody>
-              {results.map((result, index) => {
-                const resultId = `${result.feature_id}-${result.law_id}`;
+              {results.map((result) => {
+                const resultId = `${result.feature_name}-${result.law_title}`;
                 const isExpanded = expandedRows.has(resultId);
                 
                 return (
@@ -159,13 +159,13 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
                       <td className="py-4 px-4">
                         <div>
                           <p className="font-medium text-gray-900">{result.feature_name}</p>
-                          <p className="text-sm text-gray-500">{result.feature_id}</p>
+                          <p className="text-sm text-gray-500">{result.feature_name}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-medium text-gray-900">{result.law_name}</p>
-                          <p className="text-sm text-gray-500">{result.law_id}</p>
+                          <p className="font-medium text-gray-900">{result.law_title}</p>
+                          <p className="text-sm text-gray-500">{result.law_title}</p>
                         </div>
                       </td>
                       <td className="py-4 px-4">
@@ -226,8 +226,8 @@ const ComplianceTable: React.FC<ComplianceTableProps> = ({ results, summary, onF
                             
                             <div className="flex items-center justify-between pt-2 border-t border-gray-200">
                               <div className="flex items-center space-x-4 text-sm text-gray-500">
-                                <span>Feature ID: {result.feature_id}</span>
-                                <span>Law ID: {result.law_id}</span>
+                                <span>Feature: {result.feature_name}</span>
+                                <span>Law: {result.law_title}</span>
                               </div>
                               <button
                                 onClick={() => onFeedbackClick(result)}

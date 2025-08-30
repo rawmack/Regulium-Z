@@ -2,13 +2,14 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
+import path from 'path';
 import apiRoutes from './routes/api';
 
-// Load environment variables
-dotenv.config();
+// Load environment variables from the backend directory
+dotenv.config({ path: path.resolve(__dirname, '../.env') });
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 8000;
 
 // Security middleware
 app.use(helmet({

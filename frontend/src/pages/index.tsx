@@ -5,7 +5,6 @@ import FeedbackChatbox from '../components/FeedbackChatbox';
 import { 
   ComplianceResult, 
   ComplianceCheckRequest, 
-  ComplianceCheckResponse,
   FeedbackRequest,
   Feature,
   Law 
@@ -33,12 +32,16 @@ const MainPage: React.FC = () => {
 
   const loadFeatures = async () => {
     try {
+      console.log('Loading features...');
       const response = await fetch('/api/features');
+      console.log('Features response:', response);
       const data = await response.json();
+      console.log('Features data:', data);
       if (data.success) {
         setFeatures(data.data);
         // Select all features by default
-        setSelectedFeatures(data.data.map((f: Feature) => f.feature_id));
+        setSelectedFeatures(data.data.map((f: Feature) => f.feature_name));
+        console.log('Features loaded successfully:', data.data.length);
       }
     } catch (error) {
       console.error('Error loading features:', error);
@@ -48,12 +51,16 @@ const MainPage: React.FC = () => {
 
   const loadLaws = async () => {
     try {
+      console.log('Loading laws...');
       const response = await fetch('/api/laws');
+      console.log('Laws response:', response);
       const data = await response.json();
+      console.log('Laws data:', data);
       if (data.success) {
         setLaws(data.data);
         // Select all laws by default
-        setSelectedLaws(data.data.map((l: Law) => l.law_id));
+        setSelectedLaws(data.data.map((l: Law) => l.law_title));
+        console.log('Laws loaded successfully:', data.data.length);
       }
     } catch (error) {
       console.error('Error loading laws:', error);
@@ -129,11 +136,11 @@ const MainPage: React.FC = () => {
   };
 
   const handleSelectAllFeatures = () => {
-    setSelectedFeatures(features.map(f => f.feature_id));
+    setSelectedFeatures(features.map(f => f.feature_name));
   };
 
   const handleSelectAllLaws = () => {
-    setSelectedLaws(laws.map(l => l.law_id));
+    setSelectedLaws(laws.map(l => l.law_title));
   };
 
   const handleClearAllFeatures = () => {
@@ -215,29 +222,25 @@ const MainPage: React.FC = () => {
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {features.map((feature) => (
-                  <label key={feature.feature_id} className="flex items-center space-x-3">
+                  <label key={feature.feature_name} className="flex items-center space-x-3">
                     <input
                       type="checkbox"
-                      checked={selectedFeatures.includes(feature.feature_id)}
+                      checked={selectedFeatures.includes(feature.feature_name)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedFeatures([...selectedFeatures, feature.feature_id]);
+                          setSelectedFeatures([...selectedFeatures, feature.feature_name]);
                         } else {
-                          setSelectedFeatures(selectedFeatures.filter(id => id !== feature.feature_id));
+                          setSelectedFeatures(selectedFeatures.filter(id => id !== feature.feature_name));
                         }
                       }}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">{feature.feature_name}</p>
-                      <p className="text-xs text-gray-500 truncate">{feature.feature_id}</p>
+                      <p className="text-xs text-gray-500 truncate">{feature.feature_name}</p>
                     </div>
-                    <span className={`badge ${
-                      feature.risk_level.toLowerCase() === 'high' ? 'badge-danger' :
-                      feature.risk_level.toLowerCase() === 'medium' ? 'badge-warning' :
-                      'badge-success'
-                    }`}>
-                      {feature.risk_level}
+                    <span className="badge badge-info">
+                      Feature
                     </span>
                   </label>
                 ))}
@@ -265,22 +268,22 @@ const MainPage: React.FC = () => {
               </div>
               <div className="space-y-2 max-h-48 overflow-y-auto">
                 {laws.map((law) => (
-                  <label key={law.law_id} className="flex items-center space-x-3">
+                  <label key={law.law_title} className="flex items-center space-x-3">
                     <input
                       type="checkbox"
-                      checked={selectedLaws.includes(law.law_id)}
+                      checked={selectedLaws.includes(law.law_title)}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setSelectedLaws([...selectedLaws, law.law_id]);
+                          setSelectedLaws([...selectedLaws, law.law_title]);
                         } else {
-                          setSelectedLaws(selectedLaws.filter(id => id !== law.law_id));
+                          setSelectedLaws(selectedLaws.filter(id => id !== law.law_title));
                         }
                       }}
                       className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-900 truncate">{law.law_name}</p>
-                      <p className="text-xs text-gray-500 truncate">{law.law_id}</p>
+                      <p className="text-sm font-medium text-gray-900 truncate">{law.law_title}</p>
+                      <p className="text-xs text-gray-500 truncate">{law['country-region']}</p>
                     </div>
                   </label>
                 ))}

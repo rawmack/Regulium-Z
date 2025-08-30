@@ -57,8 +57,8 @@ export class FeedbackHandler {
 
       const newFeedback: Correction = {
         id: feedbackId,
-        feature_id: feedback.feature_id,
-        law_id: feedback.law_id,
+        feature_name: feedback.feature_name,
+        law_title: feedback.law_title,
         feedback_type: feedback.feedback_type,
         message: feedback.message,
         user_email: feedback.user_email,
@@ -110,15 +110,15 @@ export class FeedbackHandler {
     }
   }
 
-  public getCorrectionsByFeature(featureId: string): Correction[] {
+  public getCorrectionsByFeature(featureName: string): Correction[] {
     return this.getCorrections().filter(correction => 
-      correction.feature_id === featureId
+      correction.feature_name === featureName
     );
   }
 
-  public getCorrectionsByLaw(lawId: string): Correction[] {
+  public getCorrectionsByLaw(lawTitle: string): Correction[] {
     return this.getCorrections().filter(correction => 
-      correction.law_id === lawId
+      correction.law_title === lawTitle
     );
   }
 
@@ -165,10 +165,10 @@ export class FeedbackHandler {
     return `feedback_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   }
 
-  public getCorrectionsForCompliance(featureId: string, lawId: string): Correction[] {
+  public getCorrectionsForCompliance(featureName: string, lawTitle: string): Correction[] {
     return this.getCorrections().filter(correction => 
-      correction.feature_id === featureId && 
-      correction.law_id === lawId &&
+      correction.feature_name === featureName && 
+      correction.law_title === lawTitle &&
       correction.status === 'implemented'
     );
   }
