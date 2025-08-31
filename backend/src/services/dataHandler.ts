@@ -195,7 +195,10 @@ export class DataHandler {
   }
 
   public getFeatureByName(featureName: string): Feature | undefined {
-    return this.features.find(feature => feature.feature_name === featureName);
+    const normalizedName = featureName.trim();
+    return this.features.find(feature => 
+      feature.feature_name.trim().toLowerCase() === normalizedName.toLowerCase()
+    );
   }
 
   public getLawsByCountry(country: string): Law[] {
@@ -229,17 +232,18 @@ export class DataHandler {
         return false;
       }
 
-      // Check if feature already exists
+      // Check if feature already exists (case-insensitive)
       const existingFeature = this.getFeatureByName(featureName);
       if (existingFeature) {
         console.warn(`Feature with name "${featureName}" already exists`);
+        console.warn(`Existing feature: "${existingFeature.feature_name}"`);
         return false;
       }
 
       // Create new feature object
       const newFeature: Feature = {
-        feature_name: featureName,
-        feature_description: featureDescription
+        feature_name: featureName.trim(),
+        feature_description: featureDescription.trim()
       };
 
       // Add to memory
@@ -262,7 +266,7 @@ export class DataHandler {
       }
 
       // Add new feature row
-      const newRow = `"${featureName}","${featureDescription}"`;
+      const newRow = `"${newFeature.feature_name}","${newFeature.feature_description}"`;
       csvContent += `\n${newRow}`;
 
       // Write back to CSV

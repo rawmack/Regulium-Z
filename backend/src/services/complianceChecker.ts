@@ -57,6 +57,7 @@ export class ComplianceChecker {
       let compliantCount = 0;
       let nonCompliantCount = 0;
       let reviewRequiredCount = 0;
+      let totalRelevantLaws = 0;
 
       // Filter features and laws based on request
       const targetFeatures = request.features 
@@ -67,9 +68,17 @@ export class ComplianceChecker {
         ? laws.filter(l => request.laws!.includes(l.law_title))
         : laws;
 
-      // Check each feature against each law
+      // Check each feature against relevant laws only
       for (const feature of targetFeatures) {
-        for (const law of targetLaws) {
+        // Screen laws for relevance to this specific feature
+        const relevantLawTitles = await this.screenLawsForRelevance(feature, targetLaws);
+        const relevantLaws = targetLaws.filter(law => relevantLawTitles.includes(law.law_title));
+        
+        console.log(`Feature "${feature.feature_name}": ${relevantLaws.length} relevant laws out of ${targetLaws.length} total laws`);
+        totalRelevantLaws += relevantLaws.length;
+
+        // Check feature against only relevant laws
+        for (const law of relevantLaws) {
           const result = await this.checkFeatureCompliance(feature, law, request);
           results.push(result);
 
@@ -93,11 +102,11 @@ export class ComplianceChecker {
         summary: {
           total_features: targetFeatures.length,
           total_laws: targetLaws.length,
-          relevant_laws: targetLaws.length,
+          relevant_laws: totalRelevantLaws,
           compliant_count: compliantCount,
           non_compliant_count: nonCompliantCount,
           review_required_count: reviewRequiredCount,
-          overall_risk_score: this.calculateRiskScore(compliantCount, nonCompliantCount, reviewRequiredCount, targetLaws.length)
+          overall_risk_score: this.calculateRiskScore(compliantCount, nonCompliantCount, reviewRequiredCount, totalRelevantLaws)
         },
         timestamp: new Date().toISOString()
       };
@@ -214,7 +223,7 @@ Analyze the compliance of this feature against the law. Consider:
 
 Respond in this exact JSON format:
 {
-  "compliance_status": "compliant|non_compliant|requires_review",
+  "compliance_status": "compliant|non-compliant|requires_review",
   "reasoning": "Detailed explanation of compliance assessment",
   "recommendations": ["Specific action item 1", "Specific action item 2", "Specific action item 3"]
 }
@@ -315,11 +324,16 @@ A law is RELEVANT if:
 - The feature's functionality directly interacts with the law's requirements
 - The feature could potentially violate or need to comply with the law
 - The feature's data handling, user interactions, or business logic relates to the law
+- The feature operates in the same domain or industry that the law regulates
 
 A law is NOT RELEVANT if:
 - The feature has no connection to the law's domain
 - The feature's functionality doesn't touch on the law's requirements
 - The law applies to completely different types of services or features
+- The law regulates industries or activities unrelated to the feature's purpose
+- The feature is outside the scope of what the law regulates
+
+IMPORTANT: Be very selective. Only include laws that have a direct, clear connection to the feature. It's better to miss a law than to include irrelevant ones.
 
 Respond with ONLY a JSON array of relevant law titles (exact matches from the list below):
 
@@ -343,7 +357,7 @@ Only include laws that are actually relevant. If none are relevant, return an em
           "messages": [
             {
               "role": "system",
-              "content": "You are a regulatory compliance expert. Your job is to identify which laws are relevant to a specific feature. Be selective - only include laws that truly apply to the feature's functionality."
+              "content": "You are a regulatory compliance expert. Your job is to identify which laws are relevant to a specific feature. Be very selective and conservative - only include laws that have a direct, clear, and obvious connection to the feature's functionality. When in doubt, exclude the law. It's better to be too restrictive than too permissive."
             },
             {
               "role": "user",
@@ -363,28 +377,27 @@ Only include laws that are actually relevant. If none are relevant, return an em
 
       const completion = await response.json() as any;
       const responseContent = completion.choices?.[0]?.message?.content || '';
-      console.log(`Relevance screening response:`, responseContent.substring(0, 200) + '...');
+      console.log(`Relevance screening response for ${feature.feature_name}:`, responseContent.substring(0, 200) + '...');
 
       // Parse the response to extract relevant law titles
       const relevantLawTitles = this.parseRelevanceResponse(responseContent);
-      console.log(`Identified ${relevantLawTitles.length} relevant laws:`, relevantLawTitles);
+      console.log(`Identified ${relevantLawTitles.length} relevant laws for ${feature.feature_name}:`, relevantLawTitles);
 
       // Find the actual law objects that match the titles
       const relevantLaws = allLaws.filter(law => 
         relevantLawTitles.some(title => 
-          title.toLowerCase().includes(law.law_title.toLowerCase()) ||
-          law.law_title.toLowerCase().includes(title.toLowerCase())
+          title.toLowerCase().trim() === law.law_title.toLowerCase().trim()
         )
       );
 
-      console.log(`Matched ${relevantLaws.length} laws for compliance checking`);
+      console.log(`Matched ${relevantLaws.length} laws for compliance checking for ${feature.feature_name}:`, relevantLaws.map(l => l.law_title));
       return relevantLaws.map(law => law.law_title);
 
     } catch (error) {
       console.error('Error screening laws for relevance:', error);
-      // Fallback: return all laws if screening fails
-      console.warn('Falling back to checking all laws due to screening error');
-      return allLaws.map(law => law.law_title);
+      // Fallback: return empty array if screening fails to be conservative
+      console.warn('Falling back to no laws due to screening error - manual review recommended');
+      return [];
     }
   }
 
