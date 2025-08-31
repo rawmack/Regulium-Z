@@ -96,8 +96,6 @@ Regulium-Z/
 ├── backend/laws.csv        # Regulatory requirements database
 ├── backend/features.csv    # Application features to check
 ├── package.json            # Root workspace configuration
-├── test-plan.md           # Comprehensive testing strategy
-├── testing-summary.md     # Test results and coverage
 └── README.md              # This file
 ```
 
@@ -105,7 +103,7 @@ Regulium-Z/
 
 - **Node.js**: Version 18 or higher
 - **npm**: Version 8 or higher
-- **OpenAI API Key**: Required for GPT-powered compliance checking (via OpenRouter)
+- **LLM API Key**: Required for GPT-powered compliance checking (via OpenRouter)
 
 ## 🚀 Quick Start
 
@@ -126,11 +124,10 @@ npm run install:all
 
 ### 3. Configure Environment
 ```bash
-# Copy and edit the backend environment file
-cp backend/.env.example backend/.env
+# Create and edit the environment file in the backend directory
 
-# Edit backend/.env with your OpenAI API key
-OPENAI_API_KEY=your_openai_api_key_here
+# Edit backend/.env with your LLM API key
+OPENAI_API_KEY=your_llm_api_key_here
 ```
 
 ### 4. Start Development Servers
@@ -285,24 +282,6 @@ npm run build
 - Set up proper CORS origins
 - Configure rate limiting for production traffic
 
-## 🧪 Testing
-
-### Test Coverage
-- **Backend Tests**: API endpoints, services, and data handling
-- **Frontend Tests**: Component rendering and user interactions
-- **Integration Tests**: End-to-end compliance checking workflows
-
-### Running Tests
-```bash
-# Run all tests
-npm run test
-
-# Run tests in watch mode
-npm run test:watch
-
-# Run tests with coverage
-npm run test:coverage
-```
 
 ## 🤝 Contributing
 
@@ -311,10 +290,6 @@ npm run test:coverage
 3. Commit your changes (`git commit -m 'Add amazing feature'`)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
-
-## 📝 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## 🆘 Support
 
@@ -332,7 +307,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [x] Comprehensive API
 - [x] CSV-based data management
 - [x] Error handling and fallbacks
-- [x] Testing infrastructure
 
 ### Planned 🚧
 - [ ] Multi-language support
